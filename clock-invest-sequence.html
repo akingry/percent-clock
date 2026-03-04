@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>24h Clock + Fractional Percentage Sequence</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#121a26;
+      --text:#e9eef7;
+      --muted:#a8b3c7;
+      --accent:#66e3ff;
+      --line:#24324a;
+      --good:#7CFFB2;
+      --warn:#ffd37c;
+      --bad:#ff7c7c;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background:linear-gradient(180deg, var(--bg), #070a10 70%);
+      color:var(--text);
+    }
+    .wrap{
+      max-width:980px;
+      margin:0 auto;
+      padding:24px 16px 48px;
+    }
+    header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:16px;
+    }
+    .title h1{
+      margin:0;
+      font-size:18px;
+      font-weight:650;
+      letter-spacing:.2px;
+      color:var(--text);
+    }
+    .title p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      max-width:65ch;
+    }
+
+    .clock{
+      display:flex;
+      align-items:baseline;
+      gap:12px;
+      padding:14px 16px;
+      background:rgba(18,26,38,.9);
+      border:1px solid var(--line);
+      border-radius:14px;
+      min-width:240px;
+    }
+    .clock .time{
+      font-family:var(--mono);
+      font-size:44px;
+      letter-spacing:1px;
+      font-variant-numeric: tabular-nums;
+      line-height:1;
+      color:var(--accent);
+      text-shadow: 0 0 18px rgba(102,227,255,.18);
+    }
+    .clock .label{
+      color:var(--muted);
+      font-size:12px;
+      margin-bottom:4px;
+    }
+    .clock .meta{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .clock .meta .sub{
+      color:var(--muted);
+      font-size:12px;
+      font-family:var(--mono);
+    }
+
+    .panel{
+      background:rgba(18,26,38,.85);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:16px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap:16px;
+      align-items:start;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns:1fr; }
+      .clock{ width:100%; justify-content:space-between; }
+    }
+
+    .controls{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      margin-top:8px;
+    }
+    .controls label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin:0 0 6px;
+    }
+    input{
+      width:100%;
+      padding:10px 10px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0b1220;
+      color:var(--text);
+      outline:none;
+      font-size:14px;
+      font-family:var(--mono);
+    }
+    input:focus{
+      border-color: rgba(102,227,255,.7);
+      box-shadow: 0 0 0 3px rgba(102,227,255,.12);
+    }
+    .buttons{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:12px;
+      align-items:center;
+    }
+    button{
+      border:1px solid var(--line);
+      background:#0b1220;
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:10px;
+      font-size:14px;
+      cursor:pointer;
+    }
+    button.primary{
+      border-color: rgba(102,227,255,.55);
+      background: rgba(102,227,255,.10);
+    }
+    button:active{ transform: translateY(1px); }
+    .note{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .summary{
+      display:grid;
+      gap:8px;
+      padding:12px;
+      border-radius:12px;
+      border:1px dashed rgba(102,227,255,.35);
+      background: rgba(102,227,255,.06);
+    }
+    .summary .row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .summary .row b{
+      color:var(--text);
+      font-family:var(--mono);
+      font-weight:700;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:12px;
+      overflow:hidden;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#0b1220;
+    }
+    thead th{
+      text-align:left;
+      font-size:12px;
+      color:var(--muted);
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      background: rgba(18,26,38,.65);
+      position:sticky;
+      top:0;
+    }
+    tbody td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(36,50,74,.55);
+      font-size:13px;
+      vertical-align:top;
+      font-family:var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+    tbody tr:last-child td{ border-bottom:none; }
+    tbody tr:hover td{ background: rgba(102,227,255,.05); }
+
+    .status{
+      margin-top:10px;
+      font-size:12px;
+      color:var(--muted);
+      min-height:1.2em;
+    }
+    .status.ok{ color: var(--good); }
+    .status.warn{ color: var(--warn); }
+    .status.bad{ color: var(--bad); }
+
+    /* Print-friendly styling */
+    @media print{
+      body{ background:#fff; color:#000; }
+      .wrap{ max-width:none; padding:0; }
+      header{ margin-bottom:10px; }
+      .panel, table{ background:#fff; border-color:#000; }
+      .clock{ background:#fff; border-color:#000; }
+      .clock .time{ color:#000; text-shadow:none; }
+      .title p, .note, .status, .clock .meta .sub{ color:#000; }
+      .buttons, .note.smallprint, .status, .clock .label{ display:none !important; }
+      input{ border:1px solid #000; background:#fff; color:#000; }
+      thead th{ background:#eee; color:#000; }
+      tbody td{ color:#000; }
+      a{ color:#000; text-decoration:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>24-hour Digital Clock + “Fractional Percentage Sequence” (Equal-Dollar Steps)</h1>
+        <p>
+          At step <span style="font-family:var(--mono)">(k)</span>, invest a fraction
+          <span style="font-family:var(--mono)">1 / (n − (k−1))</span> of the <em>remaining</em> capital.
+          This results in each step investing the same dollar amount: <span style="font-family:var(--mono)">Total / n</span>.
+        </p>
+      </div>
+
+      <div class="clock" aria-label="Digital clock">
+        <div class="meta">
+          <div class="label">Current time (24h)</div>
+          <div class="sub" id="clockDate">—</div>
+        </div>
+        <div class="time" id="clock">--:--</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <h2 style="margin:0 0 8px;font-size:15px;">Inputs</h2>
+
+        <div class="controls">
+          <div>
+            <label for="capital">Total capital</label>
+            <input id="capital" inputmode="decimal" placeholder="e.g., 10000" value="10000" />
+          </div>
+          <div>
+            <label for="n">Number of investments (n)</label>
+            <input id="n" inputmode="numeric" placeholder="e.g., 10" value="10" />
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button class="primary" id="generateBtn">Generate sequence</button>
+          <button id="copyBtn" title="Copy the table as TSV (paste into Excel/Sheets)">Copy table</button>
+          <button id="printBtn" title="Print-friendly view">Print</button>
+        </div>
+
+        <div class="note">
+          Percent at step <span style="font-family:var(--mono)">k</span> is computed as:
+          <span style="font-family:var(--mono)">invest_k / remaining_before_k</span>
+          which equals <span style="font-family:var(--mono)">1 / (n − (k−1))</span>.
+          The invested dollars per step stay constant at <span style="font-family:var(--mono)">Total / n</span>.
+        </div>
+
+        <div class="summary" style="margin-top:12px;">
+          <div class="row"><span>Invest per step</span><b id="perStep">$—</b></div>
+          <div class="row"><span>Total steps</span><b id="stepsOut">—</b></div>
+          <div class="row"><span>Capital (input)</span><b id="capitalOut">$—</b></div>
+        </div>
+
+        <div class="status" id="status"></div>
+      </section>
+
+      <section class="panel">
+        <h2 style="margin:0 0 8px;font-size:15px;">Sequence Table</h2>
+        <div style="overflow:auto; max-height: 520px; border-radius:12px;">
+          <table id="seqTable">
+            <thead>
+              <tr>
+                <th style="min-width:64px;">Step</th>
+                <th style="min-width:170px;">Fraction of remaining</th>
+                <th style="min-width:120px;">Percent</th>
+                <th style="min-width:170px;">Remaining (before)</th>
+                <th style="min-width:150px;">Invest (this step)</th>
+                <th style="min-width:170px;">Remaining (after)</th>
+              </tr>
+            </thead>
+            <tbody id="seqBody">
+              <!-- rows injected -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note smallprint" style="margin-top:10px;">
+          Tip: “Copy table” copies as tab-separated values (TSV) so it pastes cleanly into spreadsheets.
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Clock (HH:MM, 24h), updates on minute boundaries ----------
+    function pad2(n){ return String(n).padStart(2, '0'); }
+
+    function formatHHMM(d){
+      return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    }
+
+    function formatDateLine(d){
+      // Lightweight, offline-friendly formatting:
+      // YYYY-MM-DD (local) + weekday
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth() + 1);
+      const day = pad2(d.getDate());
+      const weekday = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()];
+      return `${weekday} ${y}-${m}-${day}`;
+    }
+
+    function tickClock(){
+      const now = new Date();
+      document.getElementById('clock').textContent = formatHHMM(now);
+      document.getElementById('clockDate').textContent = formatDateLine(now);
+    }
+
+    function scheduleMinuteClock(){
+      tickClock();
+      const now = new Date();
+      const msToNextMinute =
+        (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+      window.setTimeout(() => {
+        tickClock();
+        window.setInterval(tickClock, 60 * 1000);
+      }, msToNextMinute);
+    }
+
+    // ---------- Investing sequence ----------
+    function parseMoney(input){
+      // Accept "10,000.50", "$10000", etc.
+      const cleaned = String(input).replace(/[^0-9.\-]/g, '');
+      const val = Number(cleaned);
+      return Number.isFinite(val) ? val : NaN;
+    }
+
+    function parseIntStrict(input){
+      const s = String(input).trim();
+      if(!/^\d+$/.test(s)) return NaN;
+      const v = Number(s);
+      return Number.isInteger(v) ? v : NaN;
+    }
+
+    function money(n){
+      // Simple locale formatting; stays offline.
+      return n.toLocaleString(undefined, { style:'currency', currency:'USD' });
+    }
+
+    function pct(n){
+      return (n).toLocaleString(undefined, { maximumFractionDigits: 4 }) + "%";
+    }
+
+    function fracText(den){
+      return `1 / ${den}`;
+    }
+
+    function setStatus(msg, kind){
+      const el = document.getElementById('status');
+      el.textContent = msg || '';
+      el.className = 'status' + (kind ? ' ' + kind : '');
+    }
+
+    function clearTable(){
+      document.getElementById('seqBody').innerHTML = '';
+    }
+
+    function generate(){
+      const cap = parseMoney(document.getElementById('capital').value);
+      const n = parseIntStrict(document.getElementById('n').value);
+
+      if(!(cap > 0)){
+        clearTable();
+        setStatus('Enter a total capital greater than 0.', 'bad');
+        return;
+      }
+      if(!(n >= 1 && n <= 10000)){
+        clearTable();
+        setStatus('Enter an integer n between 1 and 10000.', 'bad');
+        return;
+      }
+
+      const perStep = cap / n;
+
+      document.getElementById('perStep').textContent = money(perStep);
+      document.getElementById('stepsOut').textContent = String(n);
+      document.getElementById('capitalOut').textContent = money(cap);
+
+      const tbody = document.getElementById('seqBody');
+      tbody.innerHTML = '';
+
+      let remaining = cap;
+
+      // Build rows 1..n
+      for(let k = 1; k <= n; k++){
+        const denom = n - (k - 1);           // n-(step-1)
+        const fraction = 1 / denom;          // 1 / remaining steps
+        const remainingBefore = remaining;
+
+        // In exact math, invest = remainingBefore * fraction == cap/n each step.
+        // Use perStep to show the equal-dollar intent (and keep it stable),
+        // but clamp at end to avoid floating negative pennies.
+        let invest = perStep;
+        if(invest > remainingBefore) invest = remainingBefore;
+
+        const percentThisStep = (remainingBefore === 0) ? 0 : (invest / remainingBefore * 100);
+        const remainingAfter = remainingBefore - invest;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${k}</td>
+          <td>${fracText(denom)}</td>
+          <td>${pct(percentThisStep)}</td>
+          <td>${money(remainingBefore)}</td>
+          <td>${money(invest)}</td>
+          <td>${money(remainingAfter)}</td>
+        `;
+        tbody.appendChild(tr);
+
+        remaining = remainingAfter;
+      }
+
+      // Small warning for rounding artifacts
+      const eps = Math.abs(remaining);
+      if(eps > 0.005){
+        setStatus('Generated (note: rounding may leave a small residual).', 'warn');
+      } else {
+        setStatus('Generated.', 'ok');
+      }
+    }
+
+    // ---------- Copy table as TSV ----------
+    function tableToTSV(){
+      const rows = [];
+      const headers = Array.from(document.querySelectorAll('#seqTable thead th'))
+        .map(th => th.textContent.trim());
+      rows.push(headers.join('\t'));
+
+      const trs = Array.from(document.querySelectorAll('#seqTable tbody tr'));
+      for(const tr of trs){
+        const cols = Array.from(tr.querySelectorAll('td'))
+          .map(td => td.textContent.trim());
+        rows.push(cols.join('\t'));
+      }
+      return rows.join('\n');
+    }
+
+    async function copyTable(){
+      const tsv = tableToTSV();
+      const hasRows = document.querySelectorAll('#seqTable tbody tr').length > 0;
+      if(!hasRows){
+        setStatus('Nothing to copy yet—generate the sequence first.', 'warn');
+        return;
+      }
+
+      try{
+        await navigator.clipboard.writeText(tsv);
+        setStatus('Copied table to clipboard (TSV).', 'ok');
+      }catch(e){
+        // Fallback for older browsers / file:// clipboard restrictions
+        const ta = document.createElement('textarea');
+        ta.value = tsv;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try{
+          const ok = document.execCommand('copy');
+          setStatus(ok ? 'Copied table to clipboard (TSV).' : 'Copy failed in this browser.', ok ? 'ok' : 'bad');
+        }catch(err){
+          setStatus('Copy failed in this browser.', 'bad');
+        }finally{
+          document.body.removeChild(ta);
+        }
+      }
+    }
+
+    // ---------- Wire up ----------
+    document.getElementById('generateBtn').addEventListener('click', generate);
+    document.getElementById('copyBtn').addEventListener('click', copyTable);
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+    // Auto-generate on Enter in inputs
+    document.getElementById('capital').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') generate(); });
+    document.getElementById('n').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') generate(); });
+
+    scheduleMinuteClock();
+    generate();
+  </script>
+</body>
+</html>

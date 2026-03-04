@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Percent Analog Clock (24h)</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: radial-gradient(1200px 900px at 50% 40%, #101a2a 0%, #070a10 55%, #05070c 100%);
+      overflow: hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    canvas {
+      display:block;
+      width:min(100vw, 100vh);
+      height:min(100vw, 100vh);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c" aria-label="24-hour analog percent clock"></canvas>
+
+  <script>
+    // Key behavior: keep the canvas backing bitmap a FIXED size after initial load.
+    // Then updates just repaint the same bitmap (hands move), so pinch-zoom never changes
+    // font sizing or layout mid-zoom.
+
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    function initCanvasOnce(){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      // Pick a fixed backing resolution based on initial screen size, capped for performance.
+      const base = Math.floor(Math.min(window.innerWidth, window.innerHeight) * dpr);
+      const size = clamp(base, 700, 1800);
+      canvas.width = size;
+      canvas.height = size;
+    }
+
+    function denomAtHour24(h){
+      // Keep 100% at the TOP (midnight at end-of-day, i.e. 24:00), as you said was correct.
+      // Use the rule that matches your examples:
+      //   denom = hours remaining INCLUDING the current hour, counting down to 24:00.
+      // That means we treat the top position as hour 24 (not 0).
+      // Examples:
+      //   15:00 -> denom 10 -> 10%
+      //   18:00 -> denom 7  -> 14.29%
+      //   21:00 -> denom 4  -> 25%
+      //   24:00 -> denom 1  -> 100%
+      const H = (h === 0) ? 24 : h; // map 0 to 24 for label math only
+      return 25 - H;
+    }
+
+    function fmtPct(pct){
+      // Always show 2 decimals, rounded.
+      return pct.toFixed(2) + '%';
+    }
+
+    function drawHand(a, len, w, color, alpha=1){
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = w;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawArrow(x0, y0, x1, y1, w, color, alpha=1){
+      // Straight arrow from (x0,y0) -> (x1,y1)
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = w;
+      ctx.lineCap = 'round';
+
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      const a = Math.atan2(dy, dx);
+      const headLen = Math.max(10, w * 3.2);
+      const spread = 0.55;
+
+      const hx1 = x1 + Math.cos(a + Math.PI - spread) * headLen;
+      const hy1 = y1 + Math.sin(a + Math.PI - spread) * headLen;
+      const hx2 = x1 + Math.cos(a + Math.PI + spread) * headLen;
+      const hy2 = y1 + Math.sin(a + Math.PI + spread) * headLen;
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(hx1, hy1);
+      ctx.lineTo(hx2, hy2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function draw(){
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0,0,W,H);
+
+      const cx = W/2;
+      const cy = H/2;
+      const r = Math.min(W,H) * 0.42;
+      const rOuterText = r * 0.92;
+      const rInnerText = r * 0.62;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      // Face rings
+      ctx.strokeStyle = 'rgba(102,227,255,0.22)';
+      ctx.lineWidth = Math.max(2, r * 0.007);
+      ctx.beginPath(); ctx.arc(0,0,r*1.00,0,Math.PI*2); ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(102,227,255,0.14)';
+      ctx.beginPath(); ctx.arc(0,0,r*0.72,0,Math.PI*2); ctx.stroke();
+
+      // Ticks (24)
+      for(let h=0; h<24; h++){
+        const a = (h/24)*Math.PI*2 - Math.PI/2;
+        const isMajor = (h % 6 === 0);
+        const tickLen = isMajor ? r*0.08 : r*0.05;
+        ctx.strokeStyle = isMajor ? 'rgba(233,238,247,0.35)' : 'rgba(233,238,247,0.18)';
+        ctx.lineWidth = isMajor ? Math.max(3, r*0.010) : Math.max(2, r*0.007);
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a)*(r*0.98), Math.sin(a)*(r*0.98));
+        ctx.lineTo(Math.cos(a)*(r*0.98 - tickLen), Math.sin(a)*(r*0.98 - tickLen));
+        ctx.stroke();
+      }
+
+      // Labels (percentages)
+      const fontPx = Math.max(15, Math.min(22, r * 0.082));
+      ctx.font = `${fontPx}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for(let pos=0; pos<12; pos++){
+        const a = (pos/12)*Math.PI*2 - Math.PI/2;
+
+        // inner: 0..11 (blue)
+        const hInner = pos;
+        const dInner = denomAtHour24(hInner);
+        const pctInner = fmtPct(100 / dInner);
+        ctx.fillStyle = 'rgba(102,227,255,0.95)';
+        ctx.fillText(pctInner, Math.cos(a)*rInnerText, Math.sin(a)*rInnerText);
+
+        // outer: 12..23
+        const hOuter = pos + 12;
+        const dOuter = denomAtHour24(hOuter);
+        const pctOuter = fmtPct(100 / dOuter);
+        ctx.fillStyle = 'rgba(233,238,247,0.88)';
+        ctx.fillText(pctOuter, Math.cos(a)*rOuterText, Math.sin(a)*rOuterText);
+      }
+
+      // Ring-transition arrows (no text):
+      // - Noon transition: 7.143% (at 11:00, inner ring) -> 7.692% (at 12:00, outer ring)
+      // - Midnight transition: 50% (at 23:00, outer ring) -> 100% (at 00:00, inner ring)
+      const a11 = (11/12)*Math.PI*2 - Math.PI/2;
+      const a0  = -Math.PI/2;
+      const arrowW = Math.max(2, r*0.010);
+
+      const xInner11 = Math.cos(a11) * rInnerText;
+      const yInner11 = Math.sin(a11) * rInnerText;
+      const xOuter11 = Math.cos(a11) * rOuterText;
+      const yOuter11 = Math.sin(a11) * rOuterText;
+      const xInner0  = Math.cos(a0)  * rInnerText;
+      const yInner0  = Math.sin(a0)  * rInnerText;
+      const xOuter0  = Math.cos(a0)  * rOuterText;
+      const yOuter0  = Math.sin(a0)  * rOuterText;
+
+      // Draw arrows BEHIND labels so they never block the numbers.
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-over';
+
+      const aw = Math.max(1, r*0.008);
+      // Noon: inner 11 -> outer 0
+      drawArrow(xInner11, yInner11, xOuter0, yOuter0, aw, 'rgba(102,227,255,0.55)', 0.55);
+      // Midnight: outer 11 -> inner 0
+      drawArrow(xOuter11, yOuter11, xInner0, yInner0, aw, 'rgba(233,238,247,0.40)', 0.55);
+
+      ctx.restore();
+
+      // Hands: normal 12-hour analog behavior (so 6 PM points to the bottom, etc.)
+      // while the percentage rings remain 24-hour.
+      const now = new Date();
+      const hour12 = (now.getHours() % 12) + now.getMinutes()/60 + now.getSeconds()/3600;
+      const mins   = now.getMinutes() + now.getSeconds()/60;
+      const aHour  = (hour12/12)*Math.PI*2 - Math.PI/2;
+      const aMin   = (mins/60)*Math.PI*2 - Math.PI/2;
+
+      drawHand(aHour, r*0.55, Math.max(5, r*0.018), 'rgba(102,227,255,0.90)');
+      drawHand(aMin,  r*0.78, Math.max(3, r*0.012), 'rgba(233,238,247,0.80)');
+
+      // Center cap
+      ctx.fillStyle = 'rgba(102,227,255,0.65)';
+      ctx.beginPath(); ctx.arc(0,0,Math.max(5, r*0.018),0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle = 'rgba(233,238,247,0.25)';
+      ctx.lineWidth = Math.max(2, r*0.007);
+      ctx.beginPath(); ctx.arc(0,0,Math.max(8, r*0.028),0,Math.PI*2); ctx.stroke();
+
+      ctx.restore();
+    }
+
+    initCanvasOnce();
+    draw();
+    setInterval(draw, 5000);
+
+    // If you rotate the phone or change the window size, the bitmap stays fixed on purpose.
+    // Reload the page if you want a new fit.
+  </script>
+</body>
+</html>

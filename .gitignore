@@ -1,0 +1,15 @@
+# Secrets / cert private keys
+cert/*.pfx
+cert/*.cer
+cert/*.key
+cert/*.pem
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+*.log

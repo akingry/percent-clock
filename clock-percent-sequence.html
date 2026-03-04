@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>24h Clock + Fractional Percentage (Minute Sequence)</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#121a26;
+      --text:#e9eef7;
+      --muted:#a8b3c7;
+      --accent:#66e3ff;
+      --line:#24324a;
+      --good:#7CFFB2;
+      --warn:#ffd37c;
+      --bad:#ff7c7c;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:var(--sans); background:linear-gradient(180deg, var(--bg), #070a10 70%); color:var(--text); }
+    .wrap{ max-width:980px; margin:0 auto; padding:24px 16px 48px; }
+    header{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+    h1{ margin:0; font-size:18px; font-weight:650; letter-spacing:.2px; }
+    .subtitle{ margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.35; max-width:72ch; }
+
+    .clock{ display:flex; align-items:baseline; gap:12px; padding:14px 16px; background:rgba(18,26,38,.9); border:1px solid var(--line); border-radius:14px; min-width:260px; }
+    .clock .time{ font-family:var(--mono); font-size:44px; letter-spacing:1px; font-variant-numeric: tabular-nums; line-height:1; color:var(--accent); text-shadow: 0 0 18px rgba(102,227,255,.18); }
+    .clock .meta{ display:flex; flex-direction:column; gap:2px; }
+    .clock .meta .label{ color:var(--muted); font-size:12px; margin-bottom:4px; }
+    .clock .meta .sub{ color:var(--muted); font-size:12px; font-family:var(--mono); }
+
+    .grid{ display:grid; grid-template-columns: 1.05fr .95fr; gap:16px; align-items:start; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } .clock{ width:100%; justify-content:space-between; } }
+
+    .panel{ background:rgba(18,26,38,.85); border:1px solid var(--line); border-radius:14px; padding:16px; }
+
+    label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
+    input, select{ width:100%; padding:10px 10px; border-radius:10px; border:1px solid var(--line); background:#0b1220; color:var(--text); outline:none; font-size:14px; font-family:var(--mono); }
+    input:focus, select:focus{ border-color: rgba(102,227,255,.7); box-shadow: 0 0 0 3px rgba(102,227,255,.12); }
+
+    .controls{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:8px; }
+    .buttons{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; align-items:center; }
+    button{ border:1px solid var(--line); background:#0b1220; color:var(--text); padding:10px 12px; border-radius:10px; font-size:14px; cursor:pointer; }
+    button.primary{ border-color: rgba(102,227,255,.55); background: rgba(102,227,255,.10); }
+    button:active{ transform: translateY(1px); }
+
+    .summary{ display:grid; gap:8px; padding:12px; border-radius:12px; border:1px dashed rgba(102,227,255,.35); background: rgba(102,227,255,.06); margin-top:12px; }
+    .summary .row{ display:flex; justify-content:space-between; gap:12px; font-size:13px; color:var(--muted); }
+    .summary .row b{ color:var(--text); font-family:var(--mono); font-weight:800; }
+
+    .note{ margin-top:10px; color:var(--muted); font-size:12px; line-height:1.4; }
+    .status{ margin-top:10px; font-size:12px; color:var(--muted); min-height:1.2em; }
+    .status.ok{ color: var(--good); } .status.warn{ color: var(--warn); } .status.bad{ color: var(--bad); }
+
+    table{ width:100%; border-collapse:collapse; margin-top:12px; overflow:hidden; border-radius:12px; border:1px solid var(--line); background:#0b1220; }
+    thead th{ text-align:left; font-size:12px; color:var(--muted); padding:10px 10px; border-bottom:1px solid var(--line); background: rgba(18,26,38,.65); position:sticky; top:0; }
+    tbody td{ padding:10px 10px; border-bottom:1px solid rgba(36,50,74,.55); font-size:13px; vertical-align:top; font-family:var(--mono); font-variant-numeric: tabular-nums; }
+    tbody tr:last-child td{ border-bottom:none; }
+    tbody tr:hover td{ background: rgba(102,227,255,.05); }
+
+    @media print{
+      body{ background:#fff; color:#000; }
+      .wrap{ max-width:none; padding:0; }
+      .panel, table, .clock{ background:#fff; border-color:#000; }
+      .clock .time{ color:#000; text-shadow:none; }
+      .subtitle, .note, .clock .meta .sub{ color:#000; }
+      .buttons, .status{ display:none !important; }
+      input, select{ border:1px solid #000; background:#fff; color:#000; }
+      thead th{ background:#eee; color:#000; }
+      tbody td{ color:#000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>24-hour Digital Clock + Fractional Percentage (by Minute)</h1>
+        <p class="subtitle">
+          Same idea as your investing sequence, but mapped onto a 24h day (1440 minutes).
+          Pick a <b>start time</b>; the first “ping” is one minute later and shows <span style="font-family:var(--mono)">1/1440%</span>,
+          then <span style="font-family:var(--mono)">1/1439%</span>, …, down to <span style="font-family:var(--mono)">1/1%</span>.
+        </p>
+      </div>
+
+      <div class="clock" aria-label="Digital clock">
+        <div class="meta">
+          <div class="label">Current time (24h)</div>
+          <div class="sub" id="clockDate">—</div>
+        </div>
+        <div class="time" id="clock">--:--</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <h2 style="margin:0 0 8px;font-size:15px;">Settings</h2>
+        <div class="controls">
+          <div>
+            <label for="start">Start time (HH:MM)</label>
+            <input id="start" placeholder="12:00" value="12:00" />
+          </div>
+          <div>
+            <label for="previewCount">Preview rows</label>
+            <select id="previewCount">
+              <option value="30">30</option>
+              <option value="60" selected>60</option>
+              <option value="120">120</option>
+              <option value="240">240</option>
+              <option value="1440">1440 (full day)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="buttons">
+          <button class="primary" id="applyBtn">Apply</button>
+          <button id="copyBtn" title="Copy preview table as TSV">Copy preview</button>
+          <button id="printBtn" title="Print-friendly view">Print</button>
+        </div>
+
+        <div class="summary">
+          <div class="row"><span>Start time</span><b id="startOut">—</b></div>
+          <div class="row"><span>Minutes since start</span><b id="kOut">—</b></div>
+          <div class="row"><span>Current fraction</span><b id="fracOut">—</b></div>
+          <div class="row"><span>Current percent</span><b id="pctOut">—</b></div>
+          <div class="row"><span>Denominator</span><b id="denOut">—</b></div>
+        </div>
+
+        <div class="note">
+          Definition: at minute step <span style="font-family:var(--mono)">k</span> (starting at 1, one minute after your start time),
+          denominator <span style="font-family:var(--mono)">d = 1440 - (k-1)</span>, so percent = <span style="font-family:var(--mono)">1/d%</span>.
+          If the current time is before the start time (today), this shows “not started yet”.
+        </div>
+
+        <div class="status" id="status"></div>
+      </section>
+
+      <section class="panel">
+        <h2 style="margin:0 0 8px;font-size:15px;">Preview Table</h2>
+        <div style="overflow:auto; max-height: 560px; border-radius:12px;">
+          <table id="seqTable">
+            <thead>
+              <tr>
+                <th style="min-width:64px;">k</th>
+                <th style="min-width:140px;">Time</th>
+                <th style="min-width:140px;">Fraction</th>
+                <th style="min-width:140px;">Percent</th>
+                <th style="min-width:140px;">Denominator</th>
+              </tr>
+            </thead>
+            <tbody id="seqBody"></tbody>
+          </table>
+        </div>
+
+        <div class="note" style="margin-top:10px;">
+          “Time” is <span style="font-family:var(--mono)">start + k minutes</span>. (So if start is 12:00, the first row is 12:01 → 1/1440%).
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Clock (HH:MM, 24h), updates on minute boundaries ----------
+    function pad2(n){ return String(n).padStart(2, '0'); }
+
+    function formatHHMM(d){
+      return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    }
+
+    function formatDateLine(d){
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth() + 1);
+      const day = pad2(d.getDate());
+      const weekday = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()];
+      return `${weekday} ${y}-${m}-${day}`;
+    }
+
+    function tickClock(){
+      const now = new Date();
+      document.getElementById('clock').textContent = formatHHMM(now);
+      document.getElementById('clockDate').textContent = formatDateLine(now);
+      // also refresh the percentage readout each minute
+      refreshCurrent();
+    }
+
+    function scheduleMinuteClock(){
+      tickClock();
+      const now = new Date();
+      const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+      window.setTimeout(() => {
+        tickClock();
+        window.setInterval(tickClock, 60 * 1000);
+      }, msToNextMinute);
+    }
+
+    // ---------- Percent-sequence logic ----------
+    const DAY_MINUTES = 1440;
+    let startMinuteOfDay = 12 * 60; // default 12:00
+
+    function setStatus(msg, kind){
+      const el = document.getElementById('status');
+      el.textContent = msg || '';
+      el.className = 'status' + (kind ? ' ' + kind : '');
+    }
+
+    function parseHHMM(s){
+      const m = String(s).trim().match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+      if(!m) return null;
+      return { hh: Number(m[1]), mm: Number(m[2]) };
+    }
+
+    function minuteOfDay(d){
+      return d.getHours() * 60 + d.getMinutes();
+    }
+
+    function hhmmFromMinute(min){
+      min = ((min % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
+      const hh = Math.floor(min / 60);
+      const mm = min % 60;
+      return pad2(hh) + ":" + pad2(mm);
+    }
+
+    function computeK(nowMin, startMin){
+      // k=1 occurs at start+1 minute.
+      // If now <= start, then not started yet (today).
+      if(nowMin <= startMin) return 0;
+      const diff = nowMin - startMin; // minutes after start
+      return diff; // at start+1 => diff=1 => k=1
+    }
+
+    function denomForK(k){
+      // d = 1440 - (k-1)
+      return DAY_MINUTES - (k - 1);
+    }
+
+    function pctTextFromDenom(d){
+      // percent = 1/d %
+      const val = 1 / d;
+      // show 6 decimals max; gets tiny early in the day
+      return (val).toLocaleString(undefined, { maximumFractionDigits: 6 }) + "%";
+    }
+
+    function refreshCurrent(){
+      const now = new Date();
+      const nowMin = minuteOfDay(now);
+      const k = computeK(nowMin, startMinuteOfDay);
+
+      document.getElementById('startOut').textContent = hhmmFromMinute(startMinuteOfDay);
+
+      if(k === 0){
+        document.getElementById('kOut').textContent = "—";
+        document.getElementById('fracOut').textContent = "—";
+        document.getElementById('pctOut').textContent = "—";
+        document.getElementById('denOut').textContent = "—";
+        setStatus(`Not started yet (today). First row will be ${hhmmFromMinute(startMinuteOfDay + 1)} → 1/1440%.`, 'warn');
+        return;
+      }
+
+      if(k > DAY_MINUTES){
+        // Past the 24h window relative to start (shouldn't happen same-day, but safe).
+        setStatus('Past the 24-hour window for this start time.', 'warn');
+      } else {
+        setStatus('', '');
+      }
+
+      const d = denomForK(k);
+      const frac = `1 / ${d}%`;
+
+      document.getElementById('kOut').textContent = String(k);
+      document.getElementById('denOut').textContent = String(d);
+      document.getElementById('fracOut').textContent = frac;
+      document.getElementById('pctOut').textContent = pctTextFromDenom(d);
+    }
+
+    function buildPreview(){
+      const count = Number(document.getElementById('previewCount').value);
+      const tbody = document.getElementById('seqBody');
+      tbody.innerHTML = '';
+
+      const rows = Math.min(count, DAY_MINUTES);
+      for(let k = 1; k <= rows; k++){
+        const d = denomForK(k);
+        const t = hhmmFromMinute(startMinuteOfDay + k);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${k}</td>
+          <td>${t}</td>
+          <td>1 / ${d}%</td>
+          <td>${pctTextFromDenom(d)}</td>
+          <td>${d}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function applySettings(){
+      const parsed = parseHHMM(document.getElementById('start').value);
+      if(!parsed){
+        setStatus('Start time must be HH:MM (24-hour), e.g. 12:00 or 09:30.', 'bad');
+        return;
+      }
+      startMinuteOfDay = parsed.hh * 60 + parsed.mm;
+      setStatus('Applied.', 'ok');
+      buildPreview();
+      refreshCurrent();
+      window.setTimeout(()=>setStatus('', ''), 900);
+    }
+
+    // ---------- Copy preview as TSV ----------
+    function tableToTSV(){
+      const rows = [];
+      const headers = Array.from(document.querySelectorAll('#seqTable thead th'))
+        .map(th => th.textContent.trim());
+      rows.push(headers.join('\t'));
+      const trs = Array.from(document.querySelectorAll('#seqTable tbody tr'));
+      for(const tr of trs){
+        const cols = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim());
+        rows.push(cols.join('\t'));
+      }
+      return rows.join('\n');
+    }
+
+    async function copyPreview(){
+      const hasRows = document.querySelectorAll('#seqTable tbody tr').length > 0;
+      if(!hasRows){ setStatus('Nothing to copy yet.', 'warn'); return; }
+      const tsv = tableToTSV();
+      try{
+        await navigator.clipboard.writeText(tsv);
+        setStatus('Copied preview to clipboard (TSV).', 'ok');
+      }catch(e){
+        const ta = document.createElement('textarea');
+        ta.value = tsv;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try{
+          const ok = document.execCommand('copy');
+          setStatus(ok ? 'Copied preview to clipboard (TSV).' : 'Copy failed in this browser.', ok ? 'ok' : 'bad');
+        }catch(err){
+          setStatus('Copy failed in this browser.', 'bad');
+        }finally{
+          document.body.removeChild(ta);
+        }
+      }
+    }
+
+    // ---------- Wire up ----------
+    document.getElementById('applyBtn').addEventListener('click', applySettings);
+    document.getElementById('copyBtn').addEventListener('click', copyPreview);
+    document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+    document.getElementById('start').addEventListener('keydown', (e)=>{ if(e.key==='Enter') applySettings(); });
+    document.getElementById('previewCount').addEventListener('change', buildPreview);
+
+    // init
+    buildPreview();
+    refreshCurrent();
+    scheduleMinuteClock();
+  </script>
+</body>
+</html>
