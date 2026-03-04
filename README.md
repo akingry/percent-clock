@@ -1,50 +1,67 @@
-# 24h Analog Percent Clock
+# Percent Clock Math (Discrete Reciprocal -> Singularity)
 
-Single‑page analog clock that replaces hour numbers with your **fractional percentage sequence** values.
+This project is built around a simple discrete reciprocal function:
 
-- **Inner ring (blue):** 0–11 (AM)
-- **Outer ring (white):** 12–23 (PM)
-- **Labels:** always **two decimal places**.
-- **Hands:** normal **12‑hour** analog behavior.
-- **Refresh:** redraw every **5 seconds**.
+- **Discrete points:** \((p, I)\)
+- **Rule:**
 
-## Math (from your Desmos table)
-For hour `h` (0–23), the label is:
+\[
+I = \frac{1}{n - p}
+\]
 
-- If `h = 0`, treat it as **24** for the label math.
-- Denominator: `d = 25 - H` where `H = (h == 0 ? 24 : h)`
-- Percent shown: `100 / d` (as a percent)
+For the clock idea, we use **\(n = 24\)** (24 intervals) and step **\(p\)** through:
 
-Examples:
-- 0 → 100.00%
-- 12 → 7.69%
-- 15 → 10.00%
-- 18 → 14.29%
-- 21 → 25.00%
-- 23 → 50.00%
+\[
+p \in \{0, 1, 2, \dots, 23\}
+\]
 
-## Run locally (HTTPS on port 8443)
-This uses a tiny Node HTTPS static server (self‑signed cert), so it works well on phones on the same LAN.
+As \(p\) increases toward \(n\), the denominator \((n - p)\) shrinks toward zero, and \(I\) spikes upward. This is the hallmark of a **rectangular hyperbola** approaching a **vertical asymptote**.
 
-1) Create the dev cert (one time):
+## Continuous form (the curve being sampled)
+The discrete sequence is a sampled slice of the continuous curve:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\make-cert.ps1
-```
+\[
+y = \frac{1}{24 - x}
+\]
 
-2) Start the server:
+- Vertical asymptote at \(x = 24\)
+- Hyperbolic blow‑up as \(x \to 24^-\)
 
-```powershell
-node .\server.js
-```
+## Hyperbolic identity form
+The same relationship can be written as:
 
-3) Open:
-- Desktop: `https://localhost:8443/clock.html`
-- Phone (same Wi‑Fi): `https://<your-lan-ip>:8443/clock.html`
+\[
+I\,(24 - p) = 1
+\]
 
-> Note: Your browser will warn about the self‑signed certificate; proceed.
+This makes the “singularity” explicit: the product must remain 1, so as \((24 - p)\) becomes small, \(I\) must become large.
 
-## Files
-- `clock.html` — the clock
-- `server.js` — HTTPS static server
-- `make-cert.ps1` — generates `cert/devcert.pfx` (ignored by git)
+## Exponential approximation (useful but not exact)
+A true exponential does **not** equal a hyperbola, but you can match the endpoints (\(p=0\) and \(p=23\)) to get a rough exponential-shaped approximation:
+
+\[
+I \approx \frac{1}{24}\,24^{\,p/23}
+\]
+
+Equivalently:
+
+\[
+I \approx \frac{1}{24}\,e^{\,(\ln 24/23)\,p}
+\]
+
+This approximation **underestimates** the true values in the middle/end because a hyperbola accelerates into a vertical asymptote in a way a single exponential cannot.
+
+## “Consuming a resource” -> singularity
+This function is a toy model of what happens when a **finite resource** is consumed:
+
+- Think of \((n - p)\) as “resource remaining”.
+- Each step reduces what’s left.
+- The *cost/pressure/urgency* modeled by \(I\) rises as remaining resource shrinks.
+
+The key insight is endgame dominance:
+
+- Early steps feel mild because \((n-p)\) is large.
+- Late steps dominate because \((n-p)\) becomes small.
+- The approach to the boundary \(p \to n\) creates a **hyperbolic blow‑up**, i.e. a **singularity-like spike**.
+
+In plain terms: **the closer you get to exhausting the remaining degrees of freedom, the faster the “intensity” rises.**
