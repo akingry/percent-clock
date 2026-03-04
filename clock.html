@@ -61,6 +61,12 @@
       return pct.toFixed(2) + '%';
     }
 
+    function labelForDenom(d){
+      // Replace 100% (denom=1) with infinity symbol.
+      if (d === 1) return '∞';
+      return fmtPct(100 / d);
+    }
+
     function drawHand(a, len, w, color, alpha=1){
       ctx.save();
       ctx.globalAlpha = alpha;
@@ -150,23 +156,49 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
+      // Hour labels
       for(let pos=0; pos<12; pos++){
         const a = (pos/12)*Math.PI*2 - Math.PI/2;
 
         // inner: 0..11 (blue)
         const hInner = pos;
         const dInner = denomAtHour24(hInner);
-        const pctInner = fmtPct(100 / dInner);
+        const txtInner = labelForDenom(dInner);
         ctx.fillStyle = 'rgba(102,227,255,0.95)';
-        ctx.fillText(pctInner, Math.cos(a)*rInnerText, Math.sin(a)*rInnerText);
+        ctx.fillText(txtInner, Math.cos(a)*rInnerText, Math.sin(a)*rInnerText);
 
         // outer: 12..23
         const hOuter = pos + 12;
         const dOuter = denomAtHour24(hOuter);
-        const pctOuter = fmtPct(100 / dOuter);
+        const txtOuter = labelForDenom(dOuter);
         ctx.fillStyle = 'rgba(233,238,247,0.88)';
-        ctx.fillText(pctOuter, Math.cos(a)*rOuterText, Math.sin(a)*rOuterText);
+        ctx.fillText(txtOuter, Math.cos(a)*rOuterText, Math.sin(a)*rOuterText);
       }
+
+      // Half-hour labels (smaller), placed between the hours
+      const smallFontPx = Math.max(11, Math.min(16, fontPx * 0.68));
+      ctx.font = `${smallFontPx}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
+
+      for(let pos=0; pos<12; pos++){
+        const aHalf = ((pos + 0.5)/12)*Math.PI*2 - Math.PI/2;
+
+        // inner half-hours: 0.5 .. 11.5
+        const hInnerHalf = pos + 0.5;
+        const dInnerHalf = denomAtHour24(hInnerHalf);
+        const txtInnerHalf = labelForDenom(dInnerHalf);
+        ctx.fillStyle = 'rgba(102,227,255,0.70)';
+        ctx.fillText(txtInnerHalf, Math.cos(aHalf)*rInnerText, Math.sin(aHalf)*rInnerText);
+
+        // outer half-hours: 12.5 .. 23.5
+        const hOuterHalf = pos + 12.5;
+        const dOuterHalf = denomAtHour24(hOuterHalf);
+        const txtOuterHalf = labelForDenom(dOuterHalf);
+        ctx.fillStyle = 'rgba(233,238,247,0.60)';
+        ctx.fillText(txtOuterHalf, Math.cos(aHalf)*rOuterText, Math.sin(aHalf)*rOuterText);
+      }
+
+      // Restore main font for anything drawn after this
+      ctx.font = `${fontPx}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
 
       // Ring-transition arrows (no text):
       // - Noon transition: 7.143% (at 11:00, inner ring) -> 7.692% (at 12:00, outer ring)
