@@ -204,46 +204,21 @@
         ctx.fillText(txtOuterHalf, Math.cos(aHalf)*rOuterText, Math.sin(aHalf)*rOuterText);
       }
 
-      // Quarter-hour labels (even smaller)
-      const qFontPx = Math.max(9, Math.min(13, fontPx * 0.50));
-      ctx.font = `${qFontPx}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
-
-      const quarters = [0.25, 0.75];
-      for(let pos=0; pos<12; pos++){
-        for(const q of quarters){
-          const aQ = ((pos + q)/12)*Math.PI*2 - Math.PI/2;
-
-          // inner quarter-hours
-          const hInnerQ = pos + q;
-          const dInnerQ = denomAtHour24(hInnerQ);
-          const txtInnerQ = labelForDenom(dInnerQ);
-          ctx.fillStyle = 'rgba(102,227,255,0.55)';
-          ctx.fillText(txtInnerQ, Math.cos(aQ)*rInnerText, Math.sin(aQ)*rInnerText);
-
-          // outer quarter-hours
-          const hOuterQ = pos + 12 + q;
-          const dOuterQ = denomAtHour24(hOuterQ);
-          const txtOuterQ = labelForDenom(dOuterQ);
-          ctx.fillStyle = 'rgba(233,238,247,0.45)';
-          ctx.fillText(txtOuterQ, Math.cos(aQ)*rOuterText, Math.sin(aQ)*rOuterText);
-        }
-      }
-
       // Restore main font for anything drawn after this
       ctx.font = `${fontPx}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
 
       // Ring-transition arrows (no text):
-      // Reoriented to run from the LAST QUARTER position on the source ring to the target.
-      // Noon: 11:45 (inner) -> 12:00 (outer)
-      // Midnight: 23:45 (outer) -> ∞ at the top (inner)
+      // Reoriented to run from the LAST HALF-HOUR position on the source ring to the target.
+      // Noon: 11:30 (inner) -> 12:00 (outer)
+      // Midnight: 23:30 (outer) -> ∞ at the top (inner)
       const a0  = -Math.PI/2;
-      const aInnerLastQuarter = ((11 + 0.75)/12)*Math.PI*2 - Math.PI/2; // 11:45 on the dial
-      const aOuterLastQuarter = aInnerLastQuarter; // same angle, different ring
+      const aInnerLastHalf = ((11 + 0.5)/12)*Math.PI*2 - Math.PI/2; // 11:30 on the dial
+      const aOuterLastHalf = aInnerLastHalf;
 
-      const xInnerQ = Math.cos(aInnerLastQuarter) * rInnerText;
-      const yInnerQ = Math.sin(aInnerLastQuarter) * rInnerText;
-      const xOuterQ = Math.cos(aOuterLastQuarter) * rOuterText;
-      const yOuterQ = Math.sin(aOuterLastQuarter) * rOuterText;
+      const xInnerH = Math.cos(aInnerLastHalf) * rInnerText;
+      const yInnerH = Math.sin(aInnerLastHalf) * rInnerText;
+      const xOuterH = Math.cos(aOuterLastHalf) * rOuterText;
+      const yOuterH = Math.sin(aOuterLastHalf) * rOuterText;
 
       const xInner0  = Math.cos(a0)  * rInnerText;
       const yInner0  = Math.sin(a0)  * rInnerText;
@@ -256,9 +231,9 @@
 
       const aw = Math.max(1, r*0.008);
       // Noon arrow
-      drawArrow(xInnerQ, yInnerQ, xOuter0, yOuter0, aw, 'rgba(102,227,255,0.55)', 0.55);
-      // Midnight arrow (outer last quarter -> infinity position on inner ring)
-      drawArrow(xOuterQ, yOuterQ, xInner0, yInner0, aw, 'rgba(233,238,247,0.40)', 0.55);
+      drawArrow(xInnerH, yInnerH, xOuter0, yOuter0, aw, 'rgba(102,227,255,0.55)', 0.55);
+      // Midnight arrow (outer last half-hour -> infinity position on inner ring)
+      drawArrow(xOuterH, yOuterH, xInner0, yInner0, aw, 'rgba(233,238,247,0.40)', 0.55);
 
       ctx.restore();
 
