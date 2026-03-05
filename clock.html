@@ -147,16 +147,28 @@
       ctx.strokeStyle = 'rgba(102,227,255,0.14)';
       ctx.beginPath(); ctx.arc(0,0,r*0.72,0,Math.PI*2); ctx.stroke();
 
-      // Ticks (24)
+      // Ticks (24), alternating between the outer and inner ring.
+      // The alternation phase flips at noon/midnight based on current time.
+      const nowForTicks = new Date();
+      const phase = (nowForTicks.getHours() < 12) ? 0 : 1; // AM: start on outer, PM: start on inner (flip)
+
+      const rOuterTick = r * 0.98;
+      const rInnerTick = (r * 0.72) * 0.98;
+
       for(let h=0; h<24; h++){
         const a = (h/24)*Math.PI*2 - Math.PI/2;
         const isMajor = (h % 6 === 0);
         const tickLen = isMajor ? r*0.08 : r*0.05;
-        ctx.strokeStyle = isMajor ? 'rgba(233,238,247,0.35)' : 'rgba(233,238,247,0.18)';
-        ctx.lineWidth = isMajor ? Math.max(3, r*0.010) : Math.max(2, r*0.007);
+        const tickW = isMajor ? Math.max(3, r*0.010) : Math.max(2, r*0.007);
+
+        const useOuter = ((h + phase) % 2 === 0);
+        const r0 = useOuter ? rOuterTick : rInnerTick;
+
+        ctx.strokeStyle = isMajor ? 'rgba(233,238,247,0.32)' : 'rgba(233,238,247,0.16)';
+        ctx.lineWidth = tickW;
         ctx.beginPath();
-        ctx.moveTo(Math.cos(a)*(r*0.98), Math.sin(a)*(r*0.98));
-        ctx.lineTo(Math.cos(a)*(r*0.98 - tickLen), Math.sin(a)*(r*0.98 - tickLen));
+        ctx.moveTo(Math.cos(a)*r0, Math.sin(a)*r0);
+        ctx.lineTo(Math.cos(a)*(r0 - tickLen), Math.sin(a)*(r0 - tickLen));
         ctx.stroke();
       }
 
