@@ -80,8 +80,20 @@
       ctx.restore();
     }
 
-    function drawArrow(x0, y0, x1, y1, w, color, alpha=1){
-      // Straight arrow from (x0,y0) -> (x1,y1)
+    function drawArrow(x0, y0, x1, y1, w, color, alpha=1, trimStart=0, trimEnd=0){
+      // Straight arrow, trimmed at both ends so it doesn't crowd labels.
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      const L = Math.hypot(dx, dy);
+      if (L < 1) return;
+      const ux = dx / L;
+      const uy = dy / L;
+
+      const sx = x0 + ux * trimStart;
+      const sy = y0 + uy * trimStart;
+      const ex = x1 - ux * trimEnd;
+      const ey = y1 - uy * trimEnd;
+
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = color;
@@ -90,23 +102,21 @@
       ctx.lineCap = 'round';
 
       ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.lineTo(x1, y1);
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
       ctx.stroke();
 
-      const dx = x1 - x0;
-      const dy = y1 - y0;
-      const a = Math.atan2(dy, dx);
+      const a = Math.atan2(ey - sy, ex - sx);
       const headLen = Math.max(10, w * 3.2);
       const spread = 0.55;
 
-      const hx1 = x1 + Math.cos(a + Math.PI - spread) * headLen;
-      const hy1 = y1 + Math.sin(a + Math.PI - spread) * headLen;
-      const hx2 = x1 + Math.cos(a + Math.PI + spread) * headLen;
-      const hy2 = y1 + Math.sin(a + Math.PI + spread) * headLen;
+      const hx1 = ex + Math.cos(a + Math.PI - spread) * headLen;
+      const hy1 = ey + Math.sin(a + Math.PI - spread) * headLen;
+      const hx2 = ex + Math.cos(a + Math.PI + spread) * headLen;
+      const hy2 = ey + Math.sin(a + Math.PI + spread) * headLen;
 
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
+      ctx.moveTo(ex, ey);
       ctx.lineTo(hx1, hy1);
       ctx.lineTo(hx2, hy2);
       ctx.closePath();
@@ -230,10 +240,11 @@
       ctx.globalCompositeOperation = 'destination-over';
 
       const aw = Math.max(1, r*0.008);
+      const trim = Math.max(10, fontPx * 0.9);
       // Noon arrow
-      drawArrow(xInnerH, yInnerH, xOuter0, yOuter0, aw, 'rgba(102,227,255,0.55)', 0.55);
+      drawArrow(xInnerH, yInnerH, xOuter0, yOuter0, aw, 'rgba(102,227,255,0.55)', 0.55, trim, trim);
       // Midnight arrow (outer last half-hour -> infinity position on inner ring)
-      drawArrow(xOuterH, yOuterH, xInner0, yInner0, aw, 'rgba(233,238,247,0.40)', 0.55);
+      drawArrow(xOuterH, yOuterH, xInner0, yInner0, aw, 'rgba(233,238,247,0.40)', 0.55, trim, trim);
 
       ctx.restore();
 
