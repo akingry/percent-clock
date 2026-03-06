@@ -1,4 +1,4 @@
-# Percent Clock Math (Discrete Reciprocal -> Singularity)
+﻿# Percent Clock Math (Discrete Reciprocal -> Singularity)
 
 This project is built around a simple discrete reciprocal sequence.
 
@@ -9,7 +9,7 @@ We plot discrete points (p, I) where:
 - n = 24
 - p in {0, 1, 2, ..., 23}
 
-As p increases toward n, the denominator (n - p) shrinks toward zero, so I shoots upward. That “spike” is the discrete version of a vertical asymptote.
+As p increases toward n, the denominator (n - p) shrinks toward zero, so I shoots upward. That â€œspikeâ€ is the discrete version of a vertical asymptote.
 
 ## Continuous curve being sampled
 The discrete sequence is a sampled slice of the continuous curve:
@@ -26,21 +26,21 @@ The same relationship can be written as:
 
 - I * (24 - p) = 1
 
-This makes the “singularity” explicit: the product must stay 1, so as (24 - p) becomes small, I must become large.
+This makes the â€œsingularityâ€ explicit: the product must stay 1, so as (24 - p) becomes small, I must become large.
 
 ## Exponential approximation (useful but not exact)
 A true exponential does not equal a hyperbola, but you can fit an exponential-shaped approximation by matching endpoints at p = 0 and p = 23:
 
-- I ≈ (1/24) * 24^(p/23)
+- I â‰ˆ (1/24) * 24^(p/23)
 
 Equivalently:
 
-- I ≈ (1/24) * e^((ln 24 / 23) * p)
+- I â‰ˆ (1/24) * e^((ln 24 / 23) * p)
 
 This approximation underestimates the true values in the middle/end because 1/(n - p) accelerates into a vertical asymptote in a way a single exponential cannot.
 
-## “Consuming a resource” -> singularity
-Think of (n - p) as “resource remaining”. Each step consumes one unit. If I represents cost/pressure/urgency, then:
+## â€œConsuming a resourceâ€ -> singularity
+Think of (n - p) as â€œresource remainingâ€. Each step consumes one unit. If I represents cost/pressure/urgency, then:
 
 - early steps feel mild because (n - p) is large
 - late steps dominate because (n - p) becomes small
@@ -49,3 +49,7 @@ Think of (n - p) as “resource remaining”. Each step consumes one unit. If I 
 Plain-language takeaway:
 
 A finite resource being consumed can produce a singularity-like endgame where the last few steps contain most of the drama.
+
+## License
+
+Copyright (c) 2026 Adam Kingry. Licensed under the [MIT License](LICENSE).
